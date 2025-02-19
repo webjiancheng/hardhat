@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { time } = require("@nomicfoundation/hardhat-network-helpers");
 
-describe("存款合约测试", function () {
+describe("CityBull Token和存款合约测试", function () {
     let cyToken;
     let depositContract;
     let owner;
@@ -15,18 +15,18 @@ describe("存款合约测试", function () {
 
     beforeEach(async function () {
         [owner, user1, user2] = await ethers.getSigners();
-
+        
         // 部署 CYToken
         CYToken = await ethers.getContractFactory("CYToken");
         cyToken = await CYToken.deploy();
         cyTokenAddress = await cyToken.getAddress();
-
+        
         // 部署 DepositContract
         DepositContract = await ethers.getContractFactory("DepositContract");
         depositContract = await DepositContract.deploy(cyTokenAddress);
         depositContractAddress = await depositContract.getAddress();
 
-        // 转账测试代币
+        // 转账测试代币给测试用户
         const amount = ethers.parseEther("1000");
         await cyToken.transfer(user1.address, amount);
         await cyToken.transfer(user2.address, amount);
@@ -49,7 +49,7 @@ describe("存款合约测试", function () {
         it("应该能存入 ETH", async function () {
             const amount = ethers.parseEther("1.0");
             await depositContract.connect(user1).deposit({ value: amount });
-
+            
             const balance = await depositContract.getBalance(ethers.ZeroAddress, user1.address);
             expect(balance).to.equal(amount);
         });
@@ -63,7 +63,7 @@ describe("存款合约测试", function () {
         it("应该能提取 ETH", async function () {
             const amount = ethers.parseEther("1.0");
             await depositContract.connect(user1).deposit({ value: amount });
-
+            
             await depositContract.connect(user1).withdraw(amount);
             const balance = await depositContract.getBalance(ethers.ZeroAddress, user1.address);
             expect(balance).to.equal(0);
@@ -102,10 +102,10 @@ describe("存款合约测试", function () {
         it("ETH 存款应该正确计算利息", async function () {
             const amount = ethers.parseEther("100");
             await depositContract.connect(user1).deposit({ value: amount });
-
+            
             // 时间推进一年
             await time.increase(365 * 24 * 60 * 60);
-
+            
             const balance = await depositContract.getBalance(ethers.ZeroAddress, user1.address);
             // 预期利息: 5% = 100 * 0.05 = 5 ETH
             const expectedBalance = amount + (amount * 500n) / 10000n;
@@ -116,9 +116,9 @@ describe("存款合约测试", function () {
             const amount = ethers.parseEther("100");
             await cyToken.connect(user1).approve(depositContractAddress, amount);
             await depositContract.connect(user1).depositToken(cyTokenAddress, amount);
-
+            
             await time.increase(365 * 24 * 60 * 60);
-
+            
             const balance = await depositContract.getBalance(cyTokenAddress, user1.address);
             const expectedBalance = amount + (amount * 500n) / 10000n;
             expect(balance).to.equal(expectedBalance);

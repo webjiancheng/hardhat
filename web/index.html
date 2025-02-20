@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfoContract DApp - Ganache Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.5/ethers.umd.min.js"></script>
+    <style>
+        /* 保持原有样式 */
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .container {
+            text-align: center;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        button {
+            padding: 12px 24px;
+            margin: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #1a73e8;
+            color: white;
+            cursor: pointer;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .network-info {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f0f8ff;
+            border-radius: 4px;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success { background-color: #e6f4ea; }
+        .error { background-color: #fce8e6; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>InfoContract DApp - Ganache Test</h1>
+        
+        <div id="networkInfo" class="network-info">
+            <h3>网络信息</h3>
+            <p>当前网络: <span id="networkName">未连接</span></p>
+            <p>链 ID: <span id="chainId">-</span></p>
+            <button id="addGanacheBtn">添加 Ganache 网络</button>
+            <button id="switchNetworkBtn">切换到 Ganache</button>
+        </div>
+
+        <div id="status" class="status hidden"></div>
+        
+        <div class="button-group">
+            <button id="connectBtn">连接钱包</button>
+            <button id="disconnectBtn" disabled>断开连接</button>
+        </div>
+
+        <div id="contractInteraction" class="hidden">
+            <div>
+                <input type="text" id="nameInput" placeholder="输入姓名">
+                <input type="number" id="ageInput" placeholder="输入年龄">
+                <button id="setInfoBtn">设置信息</button>
+            </div>
+            <div>
+                <button id="getInfoBtn">获取信息</button>
+                <button id="sayHiBtn">Say Hi</button>
+            </div>
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Ganache 网络配置
+        const GANACHE_NETWORK = {
+            chainId: '0x539', // 1337 in hex
+            chainName: 'Ganache',
+            nativeCurrency: {
+                name: 'ETH',
+                symbol: 'ETH',
+                decimals: 18
+            },
+            rpcUrls: ['http://127.0.0.1:7545'],
+            blockExplorerUrls: null
+        };
+
+        // 合约配置
+        const contractAddress = "YOUR_CONTRACT_ADDRESS";
+        let contractABI; // 等待 Hardhat 生成的 ABI
+        
+        // 全局变量
+        let contract = null;
+        let provider = null;
+        let signer = null;
+        let isConnecting = false; // 添加连接状态标志
+
+        // DOM 元素
+        const networkNameSpan = document.getElementById('networkName');
+        const chainIdSpan = document.getElementById('chainId');
+        const addGanacheBtn = document.getElementById('addGanacheBtn');
+        const switchNetworkBtn = document.getElementById('switchNetworkBtn');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const contractInteraction = document.getElementById('contractInteraction');
+        const statusDiv = document.getElementById('status');
+
+        // 显示状态信息
+        function showStatus(message, isError = false) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${isError ? 'error' : 'success'}`;
+            statusDiv.classList.remove('hidden');
+            setTimeout(() => statusDiv.classList.add('hidden'), 3000);
+        }
+
+        // 检查并更新网络状态
+        async function updateNetworkStatus() {
+            if (!window.ethereum) return;
+            
+            try {
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                const networkId = parseInt(chainId, 16);
+                
+                chainIdSpan.textContent = networkId;
+                
+                if (networkId === 1337) {
+                    networkNameSpan.textContent = 'Ganache';
+                    switchNetworkBtn.disabled = true;
+                } else {
+                    networkNameSpan.textContent = `其他网络 (${networkId})`;
+                    switchNetworkBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('获取网络状态失败:', error);
+            }
+        }
+
+        // 检查钱包连接状态
+        async function checkWalletConnection() {
+            if (!window.ethereum) return false;
+            
+            try {
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                return accounts.length > 0;
+            } catch (error) {
+                console.error('检查钱包连接状态失败:', error);
+                return false;
+            }
+        }
+
+        // 连接钱包
+        async function connectWallet() {
+            if (isConnecting) {
+                showStatus('连接请求正在处理中，请稍候...', true);
+                return;
+            }
+
+            try {
+                isConnecting = true;
+                connectBtn.disabled = true;
+                
+                // 检查是否已经连接
+                const isConnected = await checkWalletConnection();
+                if (isConnected) {
+                    showStatus('钱包已经连接');
+                    updateUI(true);
+                    return;
+                }
+
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
+                
+                if (accounts.length > 0) {
+                    await updateNetworkStatus();
+                    await initializeContract();
+                    updateUI(true);
+                    showStatus('钱包连接成功！');
+                }
+            } catch (error) {
+                showStatus('连接钱包失败: ' + error.message, true);
+                updateUI(false);
+            } finally {
+                isConnecting = false;
+                connectBtn.disabled = false;
+            }
+        }
+
+        // 更新UI状态
+        function updateUI(isConnected) {
+            connectBtn.disabled = isConnected;
+            disconnectBtn.disabled = !isConnected;
+            contractInteraction.classList.toggle('hidden', !isConnected);
+        }
+
+        // 断开连接
+        function disconnectWallet() {
+            contract = null;
+            provider = null;
+            signer = null;
+            updateUI(false);
+            showStatus('已断开连接');
+        }
+
+        // 初始化合约
+        async function initializeContract() {
+            if (!window.ethereum) return null;
+            
+            try {
+                provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+                contract = new ethers.Contract(contractAddress, contractABI, signer);
+                return contract;
+            } catch (error) {
+                console.error('初始化合约失败:', error);
+                return null;
+            }
+        }
+
+        // 添加 Ganache 网络
+        async function addGanacheNetwork() {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [GANACHE_NETWORK]
+                });
+                showStatus('Ganache 网络添加成功！');
+                await updateNetworkStatus();
+            } catch (error) {
+                showStatus('添加网络失败: ' + error.message, true);
+            }
+        }
+
+        // 切换到 Ganache 网络
+        async function switchToGanache() {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: GANACHE_NETWORK.chainId }]
+                });
+                showStatus('已切换到 Ganache 网络');
+                await updateNetworkStatus();
+            } catch (error) {
+                if (error.code === 4902) {
+                    await addGanacheNetwork();
+                } else {
+                    showStatus('切换网络失败: ' + error.message, true);
+                }
+            }
+        }
+
+        // 事件监听器
+        addGanacheBtn.addEventListener('click', addGanacheNetwork);
+        switchNetworkBtn.addEventListener('click', switchToGanache);
+        connectBtn.addEventListener('click', connectWallet);
+        disconnectBtn.addEventListener('click', disconnectWallet);
+
+        // 网络监听器
+        if (window.ethereum) {
+            window.ethereum.on('chainChanged', () => {
+                updateNetworkStatus();
+                window.location.reload();
+            });
+            
+            window.ethereum.on('accountsChanged', (accounts) => {
+                if (accounts.length === 0) {
+                    disconnectWallet();
+                } else {
+                    initializeContract();
+                }
+            });
+            
+            // 初始检查
+            (async () => {
+                await updateNetworkStatus();
+                const isConnected = await checkWalletConnection();
+                if (isConnected) {
+                    await connectWallet();
+                }
+            })();
+        }
+
+        // 合约交互功能
+        document.getElementById('setInfoBtn').addEventListener('click', async () => {
+            try {
+                const name = document.getElementById('nameInput').value;
+                const age = parseInt(document.getElementById('ageInput').value);
+                
+                const tx = await contract.setInfo(name, age);
+                showStatus('交易已提交，等待确认...');
+                await tx.wait();
+                showStatus('信息设置成功！');
+            } catch (error) {
+                showStatus('设置信息失败: ' + error.message, true);
+            }
+        });
+
+        document.getElementById('getInfoBtn').addEventListener('click', async () => {
+            try {
+                const [name, age] = await contract.getInfo();
+                document.getElementById('result').textContent = 
+                    `姓名: ${name}, 年龄: ${age}`;
+            } catch (error) {
+                showStatus('获取信息失败: ' + error.message, true);
+            }
+        });
+
+        document.getElementById('sayHiBtn').addEventListener('click', async () => {
+            try {
+                const response = await contract.sayHi();
+                document.getElementById('result').textContent = `回应: ${response}`;
+            } catch (error) {
+                showStatus('调用失败: ' + error.message, true);
+            }
+        });
+    </script>
+</body>
+</html>

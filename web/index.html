@@ -1,328 +1,511 @@
 <!DOCTYPE html>
-<html lang="zh">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InfoContract DApp - Ganache Test</title>
+<html>
+  <head>
+    <title>InfoContract Interface</title>
+    <meta charset="UTF-8" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.5/ethers.umd.min.js"></script>
     <style>
-        /* 保持原有样式 */
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .container {
-            text-align: center;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        button {
-            padding: 12px 24px;
-            margin: 10px;
-            border: none;
-            border-radius: 4px;
-            background-color: #1a73e8;
-            color: white;
-            cursor: pointer;
-        }
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-        .network-info {
-            margin: 20px 0;
-            padding: 15px;
-            background-color: #f0f8ff;
-            border-radius: 4px;
-        }
-        .status {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 4px;
-        }
-        .success { background-color: #e6f4ea; }
-        .error { background-color: #fce8e6; }
-        .hidden { display: none; }
+      .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .button-container {
+        display: flex;
+        gap: 10px;
+      }
+
+      .button {
+        background-color: #3498db;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background-color 0.3s;
+      }
+
+      .button:hover {
+        background-color: #2980b9;
+      }
+
+      .button:disabled {
+        background-color: #bdc3c7;
+        cursor: not-allowed;
+      }
+
+      .disconnect-button {
+        background-color: #e74c3c;
+      }
+
+      .disconnect-button:hover {
+        background-color: #c0392b;
+      }
+
+      .wallet-info {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 16px;
+        text-align: center;
+        width: 100%;
+        display: none;
+      }
+
+      .contract-interface {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        width: 100%;
+        display: none;
+      }
+
+      .input-group {
+        margin-bottom: 15px;
+      }
+
+      .input-group label {
+        display: block;
+        margin-bottom: 5px;
+        color: #2c3e50;
+      }
+
+      .input-group input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-bottom: 10px;
+      }
+
+      .info-display {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: #fff;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+      }
+
+      .event-log {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: #fff;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+
+      .event-item {
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+      }
+
+      .event-item:last-child {
+        border-bottom: none;
+      }
+
+      .status {
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 4px;
+        display: none;
+      }
+
+      .success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <h1>InfoContract DApp - Ganache Test</h1>
-        
-        <div id="networkInfo" class="network-info">
-            <h3>网络信息</h3>
-            <p>当前网络: <span id="networkName">未连接</span></p>
-            <p>链 ID: <span id="chainId">-</span></p>
-            <button id="addGanacheBtn">添加 Ganache 网络</button>
-            <button id="switchNetworkBtn">切换到 Ganache</button>
+      <div class="button-container">
+        <button id="connectButton" class="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/>
+            <path d="M12 12h4"/>
+            <path d="M12 16V8"/>
+          </svg>
+          连接 MetaMask
+        </button>
+        <button id="disconnectButton" class="button disconnect-button" style="display: none">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+            <line x1="12" y1="2" x2="12" y2="12"/>
+          </svg>
+          断开连接
+        </button>
+      </div>
+
+      <div id="walletInfo" class="wallet-info">
+        <div id="walletAddress"></div>
+        <div id="walletBalance"></div>
+      </div>
+
+      <div id="contractInterface" class="contract-interface">
+        <h3>合约交互</h3>
+
+        <div class="input-group">
+          <label>合约地址：</label>
+          <input type="text" id="contractAddress" placeholder="输入合约地址"/>
+          <button id="initContract" class="button">初始化合约</button>
         </div>
 
-        <div id="status" class="status hidden"></div>
-        
-        <div class="button-group">
-            <button id="connectBtn">连接钱包</button>
-            <button id="disconnectBtn" disabled>断开连接</button>
-        </div>
+        <div id="contractFunctions" style="display: none">
+          <div class="input-group">
+            <label>设置信息：</label>
+            <input type="text" id="nameInput" placeholder="输入名字"/>
+            <input type="number" id="ageInput" placeholder="输入年龄"/>
+            <button id="setInfoBtn" class="button">设置信息</button>
+          </div>
 
-        <div id="contractInteraction" class="hidden">
-            <div>
-                <input type="text" id="nameInput" placeholder="输入姓名">
-                <input type="number" id="ageInput" placeholder="输入年龄">
-                <button id="setInfoBtn">设置信息</button>
-            </div>
-            <div>
-                <button id="getInfoBtn">获取信息</button>
-                <button id="sayHiBtn">Say Hi</button>
-            </div>
-            <div id="result"></div>
+          <div class="input-group">
+            <button id="getInfoBtn" class="button">获取信息</button>
+            <button id="sayHiBtn" class="button">Say Hi</button>
+          </div>
+
+          <div id="infoDisplay" class="info-display">
+            <p>当前信息将显示在这里...</p>
+          </div>
+
+          <div class="event-log">
+            <h4>事件日志</h4>
+            <div id="eventList"></div>
+          </div>
         </div>
+      </div>
+
+      <div id="statusMessage" class="status"></div>
     </div>
 
     <script>
-        // Ganache 网络配置
-        const GANACHE_NETWORK = {
-            chainId: '0x539', // 1337 in hex
-            chainName: 'Ganache',
-            nativeCurrency: {
-                name: 'ETH',
-                symbol: 'ETH',
-                decimals: 18
+      // 合约 ABI
+      const contractABI = [
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "string",
+              "name": "name",
+              "type": "string"
             },
-            rpcUrls: ['http://127.0.0.1:7545'],
-            blockExplorerUrls: null
-        };
-
-        // 合约配置
-        const contractAddress = "YOUR_CONTRACT_ADDRESS";
-        let contractABI; // 等待 Hardhat 生成的 ABI
-        
-        // 全局变量
-        let contract = null;
-        let provider = null;
-        let signer = null;
-        let isConnecting = false; // 添加连接状态标志
-
-        // DOM 元素
-        const networkNameSpan = document.getElementById('networkName');
-        const chainIdSpan = document.getElementById('chainId');
-        const addGanacheBtn = document.getElementById('addGanacheBtn');
-        const switchNetworkBtn = document.getElementById('switchNetworkBtn');
-        const connectBtn = document.getElementById('connectBtn');
-        const disconnectBtn = document.getElementById('disconnectBtn');
-        const contractInteraction = document.getElementById('contractInteraction');
-        const statusDiv = document.getElementById('status');
-
-        // 显示状态信息
-        function showStatus(message, isError = false) {
-            statusDiv.textContent = message;
-            statusDiv.className = `status ${isError ? 'error' : 'success'}`;
-            statusDiv.classList.remove('hidden');
-            setTimeout(() => statusDiv.classList.add('hidden'), 3000);
-        }
-
-        // 检查并更新网络状态
-        async function updateNetworkStatus() {
-            if (!window.ethereum) return;
-            
-            try {
-                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-                const networkId = parseInt(chainId, 16);
-                
-                chainIdSpan.textContent = networkId;
-                
-                if (networkId === 1337) {
-                    networkNameSpan.textContent = 'Ganache';
-                    switchNetworkBtn.disabled = true;
-                } else {
-                    networkNameSpan.textContent = `其他网络 (${networkId})`;
-                    switchNetworkBtn.disabled = false;
-                }
-            } catch (error) {
-                console.error('获取网络状态失败:', error);
+            {
+              "indexed": false,
+              "internalType": "uint256",
+              "name": "age",
+              "type": "uint256"
             }
-        }
-
-        // 检查钱包连接状态
-        async function checkWalletConnection() {
-            if (!window.ethereum) return false;
-            
-            try {
-                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                return accounts.length > 0;
-            } catch (error) {
-                console.error('检查钱包连接状态失败:', error);
-                return false;
+          ],
+          "name": "Instructor",
+          "type": "event"
+        },
+        {
+          "inputs": [],
+          "name": "age",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
             }
-        }
-
-        // 连接钱包
-        async function connectWallet() {
-            if (isConnecting) {
-                showStatus('连接请求正在处理中，请稍候...', true);
-                return;
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "name",
+          "outputs": [
+            {
+              "internalType": "string",
+              "name": "",
+              "type": "string"
             }
-
-            try {
-                isConnecting = true;
-                connectBtn.disabled = true;
-                
-                // 检查是否已经连接
-                const isConnected = await checkWalletConnection();
-                if (isConnected) {
-                    showStatus('钱包已经连接');
-                    updateUI(true);
-                    return;
-                }
-
-                const accounts = await window.ethereum.request({
-                    method: 'eth_requestAccounts'
-                });
-                
-                if (accounts.length > 0) {
-                    await updateNetworkStatus();
-                    await initializeContract();
-                    updateUI(true);
-                    showStatus('钱包连接成功！');
-                }
-            } catch (error) {
-                showStatus('连接钱包失败: ' + error.message, true);
-                updateUI(false);
-            } finally {
-                isConnecting = false;
-                connectBtn.disabled = false;
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "string",
+              "name": "_name",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "_age",
+              "type": "uint256"
             }
-        }
-
-        // 更新UI状态
-        function updateUI(isConnected) {
-            connectBtn.disabled = isConnected;
-            disconnectBtn.disabled = !isConnected;
-            contractInteraction.classList.toggle('hidden', !isConnected);
-        }
-
-        // 断开连接
-        function disconnectWallet() {
-            contract = null;
-            provider = null;
-            signer = null;
-            updateUI(false);
-            showStatus('已断开连接');
-        }
-
-        // 初始化合约
-        async function initializeContract() {
-            if (!window.ethereum) return null;
-            
-            try {
-                provider = new ethers.BrowserProvider(window.ethereum);
-                signer = await provider.getSigner();
-                contract = new ethers.Contract(contractAddress, contractABI, signer);
-                return contract;
-            } catch (error) {
-                console.error('初始化合约失败:', error);
-                return null;
+          ],
+          "name": "setInfo",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "sayHi",
+          "outputs": [
+            {
+              "internalType": "string",
+              "name": "",
+              "type": "string"
             }
-        }
-
-        // 添加 Ganache 网络
-        async function addGanacheNetwork() {
-            try {
-                await window.ethereum.request({
-                    method: 'wallet_addEthereumChain',
-                    params: [GANACHE_NETWORK]
-                });
-                showStatus('Ganache 网络添加成功！');
-                await updateNetworkStatus();
-            } catch (error) {
-                showStatus('添加网络失败: ' + error.message, true);
+          ],
+          "stateMutability": "pure",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "getInfo",
+          "outputs": [
+            {
+              "internalType": "string",
+              "name": "",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
             }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        }
+      ];
+
+      let contract = null;
+      let signer = null;
+
+      // DOM 元素
+      const connectButton = document.getElementById('connectButton');
+      const disconnectButton = document.getElementById('disconnectButton');
+      const walletInfo = document.getElementById('walletInfo');
+      const contractInterface = document.getElementById('contractInterface');
+      const contractFunctions = document.getElementById('contractFunctions');
+      const infoDisplay = document.getElementById('infoDisplay');
+      const eventList = document.getElementById('eventList');
+      const statusMessage = document.getElementById('statusMessage');
+
+      // 显示状态消息
+      function showStatus(message, isError = false) {
+        statusMessage.textContent = message;
+        statusMessage.className = `status ${isError ? 'error' : 'success'}`;
+        statusMessage.style.display = 'block';
+        setTimeout(() => {
+          statusMessage.style.display = 'none';
+        }, 3000);
+      }
+
+      // 检查是否安装了 MetaMask
+      const checkMetaMaskInstalled = () => {
+        if (typeof window.ethereum !== 'undefined') {
+          return true;
+        }
+        showStatus('请先安装 MetaMask!', true);
+        return false;
+      };
+
+      // 获取钱包余额
+      const getWalletBalance = async (address) => {
+        try {
+          const balance = await window.ethereum.request({
+            method: 'eth_getBalance',
+            params: [address, 'latest'],
+          });
+
+          const balanceInEther = (parseInt(balance) / Math.pow(10, 18)).toFixed(4);
+          document.getElementById('walletBalance').textContent = `余额: ${balanceInEther} ETH`;
+        } catch (error) {
+          console.error('获取余额错误:', error);
+          document.getElementById('walletBalance').textContent = '余额获取失败';
+        }
+      };
+
+      // 更新界面显示
+      const updateUI = (account) => {
+        if (account) {
+          connectButton.style.display = 'none';
+          disconnectButton.style.display = 'flex';
+          document.getElementById('walletAddress').textContent = `钱包地址: ${account.slice(0, 6)}...${account.slice(-4)}`;
+          walletInfo.style.display = 'block';
+          contractInterface.style.display = 'block';
+          getWalletBalance(account);
+        } else {
+          connectButton.style.display = 'flex';
+          disconnectButton.style.display = 'none';
+          walletInfo.style.display = 'none';
+          contractInterface.style.display = 'none';
+          contractFunctions.style.display = 'none';
+          contract = null;
+          signer = null;
+        }
+      };
+
+      // 初始化合约
+      async function initializeContract() {
+        const contractAddress = document.getElementById('contractAddress').value;
+        if (!ethers.isAddress(contractAddress)) {
+          showStatus('请输入有效的合约地址', true);
+          return;
         }
 
-        // 切换到 Ganache 网络
-        async function switchToGanache() {
-            try {
-                await window.ethereum.request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: GANACHE_NETWORK.chainId }]
-                });
-                showStatus('已切换到 Ganache 网络');
-                await updateNetworkStatus();
-            } catch (error) {
-                if (error.code === 4902) {
-                    await addGanacheNetwork();
-                } else {
-                    showStatus('切换网络失败: ' + error.message, true);
-                }
-            }
+        try {
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          signer = await provider.getSigner();
+          contract = new ethers.Contract(contractAddress, contractABI, signer);
+
+          // 监听事件
+          contract.addListener('Instructor', (name, age) => {
+            const eventItem = document.createElement('div');
+            eventItem.className = 'event-item';
+            eventItem.textContent = `新事件: 名字 = ${name}, 年龄 = ${age}`;
+            eventList.insertBefore(eventItem, eventList.firstChild);
+          });
+
+          contractFunctions.style.display = 'block';
+          showStatus('合约初始化成功！');
+        } catch (error) {
+          console.error('合约初始化失败:', error);
+          showStatus('合约初始化失败: ' + error.message, true);
+        }
+      }
+
+      // 连接钱包
+      async function connectWallet() {
+        if (!checkMetaMaskInstalled()) return;
+
+        try {
+          connectButton.disabled = true;
+          const accounts = await window.ethereum.request({
+            method: 'eth_requestAccounts',
+          });
+          updateUI(accounts[0]);
+        } catch (error) {
+          console.error('连接 MetaMask 错误:', error);
+          showStatus('连接钱包失败，请重试', true);
+        } finally {
+          connectButton.disabled = false;
+        }
+      }
+
+      // 断开连接
+      function disconnectWallet() {
+        updateUI(null);
+        showStatus('已断开连接');
+      }
+
+      // 设置信息
+      async function setInfo() {
+        if (!contract) {
+          showStatus('请先初始化合约', true);
+          return;
         }
 
-        // 事件监听器
-        addGanacheBtn.addEventListener('click', addGanacheNetwork);
-        switchNetworkBtn.addEventListener('click', switchToGanache);
-        connectBtn.addEventListener('click', connectWallet);
-        disconnectBtn.addEventListener('click', disconnectWallet);
+        const name = document.getElementById('nameInput').value;
+        const age = document.getElementById('ageInput').value;
 
-        // 网络监听器
-        if (window.ethereum) {
-            window.ethereum.on('chainChanged', () => {
-                updateNetworkStatus();
-                window.location.reload();
-            });
-            
-            window.ethereum.on('accountsChanged', (accounts) => {
-                if (accounts.length === 0) {
-                    disconnectWallet();
-                } else {
-                    initializeContract();
-                }
-            });
-            
-            // 初始检查
-            (async () => {
-                await updateNetworkStatus();
-                const isConnected = await checkWalletConnection();
-                if (isConnected) {
-                    await connectWallet();
-                }
-            })();
+        if (!name || !age) {
+          showStatus('请输入名字和年龄', true);
+          return;
         }
 
-        // 合约交互功能
-        document.getElementById('setInfoBtn').addEventListener('click', async () => {
-            try {
-                const name = document.getElementById('nameInput').value;
-                const age = parseInt(document.getElementById('ageInput').value);
-                
-                const tx = await contract.setInfo(name, age);
-                showStatus('交易已提交，等待确认...');
-                await tx.wait();
-                showStatus('信息设置成功！');
-            } catch (error) {
-                showStatus('设置信息失败: ' + error.message, true);
-            }
+        try {
+          const tx = await contract.setInfo(name, parseInt(age));
+          infoDisplay.innerHTML = '交易已发送，等待确认...';
+          await tx.wait();
+          infoDisplay.innerHTML = '信息设置成功！';
+          showStatus('信息设置成功！');
+        } catch (error) {
+          console.error('设置信息失败:', error);
+          showStatus('设置信息失败: ' + error.message, true);
+        }
+      }
+
+      // 获取信息
+      async function getInfo() {
+        if (!contract) {
+          showStatus('请先初始化合约', true);
+          return;
+        }
+
+        try {
+          const [name, age] = await contract.getInfo();
+          infoDisplay.innerHTML = `当前信息：名字 = ${name}, 年龄 = ${age}`;
+        } catch (error) {
+          console.error('获取信息失败:', error);
+          showStatus('获取信息失败: ' + error.message, true);
+        }
+      }
+
+      // Say Hi
+      async function sayHi() {
+        if (!contract) {
+          showStatus('请先初始化合约', true);
+          return;
+        }
+
+        try {
+          const message = await contract.sayHi();
+          infoDisplay.innerHTML = `返回消息: ${message}`;
+        } catch (error) {
+          console.error('调用 sayHi 失败:', error);
+          showStatus('调用 sayHi 失败: ' + error.message, true);
+        }
+      }
+
+      // 绑定事件监听
+      connectButton.addEventListener('click', connectWallet);
+      disconnectButton.addEventListener('click', disconnectWallet);
+      document.getElementById('initContract').addEventListener('click', initializeContract);
+      document.getElementById('setInfoBtn').addEventListener('click', setInfo);
+      document.getElementById('getInfoBtn').addEventListener('click', getInfo);
+      document.getElementById('sayHiBtn').addEventListener('click', sayHi);
+
+      // 监听账户变更
+      if (window.ethereum) {
+        window.ethereum.on('accountsChanged', (accounts) => {
+          if (accounts.length > 0) {
+            updateUI(accounts[0]);
+          } else {
+            updateUI(null);
+          }
         });
 
-        document.getElementById('getInfoBtn').addEventListener('click', async () => {
-            try {
-                const [name, age] = await contract.getInfo();
-                document.getElementById('result').textContent = 
-                    `姓名: ${name}, 年龄: ${age}`;
-            } catch (error) {
-                showStatus('获取信息失败: ' + error.message, true);
-            }
+        // 检查是否已经连接
+        window.ethereum.request({ method: 'eth_accounts' }).then((accounts) => {
+          if (accounts.length > 0) {
+            updateUI(accounts[0]);
+          }
         });
-
-        document.getElementById('sayHiBtn').addEventListener('click', async () => {
-            try {
-                const response = await contract.sayHi();
-                document.getElementById('result').textContent = `回应: ${response}`;
-            } catch (error) {
-                showStatus('调用失败: ' + error.message, true);
-            }
-        });
+      }
     </script>
-</body>
+  </body>
 </html>
